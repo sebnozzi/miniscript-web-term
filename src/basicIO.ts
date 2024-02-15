@@ -23,6 +23,10 @@ export class BasicIO {
 
   private print(txt: string, delim: string | null) {
 
+    if (txt === undefined || txt === null) {
+      txt = "";
+    }
+
     if (delim !== null && delim !== "\n" && delim !== "\r") {
       const options = {newline: false};
       txt = txt + delim;
