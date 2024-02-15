@@ -1,9 +1,12 @@
-print char(27) + "[32mGreetings! ", ""
-print "(using ANSI escape code)"
+import "module"
+import "stringUtil"
+
+module.greet
+
 while true
   s = input("Name? ")
   if s == "quit" then exit
-  print "Hello,", " "
+  print "hello".capitalized + ",", " "
   print s
   yield
 end while
