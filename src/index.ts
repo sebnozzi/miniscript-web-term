@@ -1,8 +1,7 @@
 import { MSTerminal } from "./msTerminal";
 
-jQuery(($: any, _: any) => {
+jQuery(() => {
   const msTerm = new MSTerminal();
-  msTerm.setup();
 
   const body = document.querySelector("body") as HTMLBodyElement;
   const mainFile = body.getAttribute("data-src-file");
@@ -13,7 +12,7 @@ jQuery(($: any, _: any) => {
   fetch(mainFile).then((response) => {
     return response.text();
   }).then((srcCode: string) => {
-    msTerm.run(srcCode, mainFile);
+    msTerm.runCode(srcCode, mainFile);
   });
 
 });
