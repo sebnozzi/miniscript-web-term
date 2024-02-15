@@ -33,8 +33,8 @@ export class MSTerminal {
         outerThis.onAfterCommand(command);
       },
       name: 'ms_terminal',
-      height: 200,
-      width: 450,
+      width: 800,
+      height: 600,
       prompt: '] ',
       greetings: ""
     } as TOptions;
