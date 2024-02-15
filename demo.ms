@@ -1,7 +1,9 @@
-print char(27) + "[32mGreetings! (using ANSI escape code)"
+print char(27) + "[32mGreetings! ", ""
+print "(using ANSI escape code)"
 while true
   s = input("Name? ")
   if s == "quit" then exit
-  print "Hello, " + s
+  print "Hello,", " "
+  print s
   yield
 end while

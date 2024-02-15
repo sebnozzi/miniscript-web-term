@@ -64,7 +64,15 @@ export class MSTerminal {
   }
 
   private print(txt: string, delim: string | null) {
-    this.jqTerm.echo(txt);
+
+    if (delim !== null && delim !== "\n" && delim !== "\r") {
+      const options = {newline: false};
+      txt = txt + delim;
+      this.jqTerm.echo(txt, options);
+    } else {
+      this.jqTerm.echo(txt);
+    }
+
   }
 
   private async input(prompt: string | null): Promise<string> {
