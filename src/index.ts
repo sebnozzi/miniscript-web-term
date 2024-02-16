@@ -1,6 +1,8 @@
 import { MSTerminal } from "./msTerminal";
+import "../static/style.css";
 
-jQuery(() => {
+addEventListener("DOMContentLoaded", async (_: Event) => {
+
   const msTerm = new MSTerminal();
 
   const body = document.querySelector("body") as HTMLBodyElement;

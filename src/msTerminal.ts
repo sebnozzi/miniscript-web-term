@@ -4,7 +4,7 @@ import { Terminal } from "@xterm/xterm";
 import { Readline } from "xterm-readline";
 import { BasicIO } from "./basicIO";
 import { ModuleLoader } from "./moduleLoader";
-
+import "../node_modules/@xterm/xterm/css/xterm.css";
 
 export class MSTerminal {
 
