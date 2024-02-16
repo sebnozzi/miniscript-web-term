@@ -1,4 +1,3 @@
-import "../static/style.css";
 
 import { MSTerminal } from "./msTerminal";
 import { HttpFileSystem } from "./fileSystems/httpFileSystem";
