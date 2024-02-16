@@ -1,13 +1,19 @@
 import { Interpreter, Runtime } from "miniscript-ts";
+import { MSFileSystem } from "./fileSystems/fileSystem";
 
 export class ModuleLoader {
+  
+  private runtime: Runtime;
 
-  constructor(private interp: Interpreter) {
-
+  constructor(
+    private interp: Interpreter,
+    private fileSystem: MSFileSystem) {
+      this.runtime = interp.runtime;
   }
 
-  addIntrinsics(runtime: Runtime) {
+  addIntrinsics() {
     const outerThis = this;
+    const runtime = this.runtime;
 
     runtime.addIntrinsic('import(moduleName)',
     function(moduleName: string) {
@@ -23,41 +29,18 @@ export class ModuleLoader {
     return runPromise;
   }
 
-  private fetchCode(moduleName: string): Promise<string> {
+  private async fetchCode(moduleName: string): Promise<string> {
     const moduleFileName = `${moduleName}.ms`;
-    // Try fetching first at the "local" project path (same as
-    // "current directory").
-    const workingDirUrl =  this.resolveLocalUrl(moduleFileName);
-    const responsePromise = fetch(workingDirUrl).then((response) => {
-      if (response.status == 200) {
-        return new Promise<Response>((resolve) => {resolve(response)});
-      } else {
-        console.info("The above HTTP failed request is normal. Trying to fetch system lib ...")
-        // Try then fetching from system libraries
-        const sysDirUrl =  this.resolveSysLibUrl(moduleFileName);
-        return fetch(sysDirUrl);
-      }
-    });
-    // Convert to text if the response is valid
-    const textPromise = responsePromise.then<string>((response) => {
-      if (response.status == 200) {
-        return response.text();
-      } else {
-        const msg = `Fetching module ${moduleFileName} failed.`;
-        console.error(msg, response);
-        throw new Error(msg);
-      }
-    });
-    
-    return textPromise;
-  }
+    const fileSystem = this.fileSystem;
 
-  private resolveLocalUrl(moduleFileName: string): string {
-    return moduleFileName;
-  }
-
-  private resolveSysLibUrl(moduleFileName: string): string {
-    return "lib/" + moduleFileName;
+    return fileSystem.getSource(moduleFileName).then((srcCode) => {
+      return srcCode;
+    }).catch(() => {
+      console.info("The above HTTP failed request is normal. Trying to fetch system lib ...")
+      return fileSystem.getSource("/lib/" + moduleFileName);
+    }).catch(() => {
+      throw new Error(`Failed to load module ${moduleName}`);
+    })
   }
 
   private runSrcAsModule(moduleName: string, srcCode: string): Promise<void> {

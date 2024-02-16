@@ -1,20 +1,22 @@
-import { MSTerminal } from "./msTerminal";
 import "../static/style.css";
+
+import { MSTerminal } from "./msTerminal";
+import { HttpFileSystem } from "./fileSystems/httpFileSystem";
 
 addEventListener("DOMContentLoaded", async (_: Event) => {
 
-  const msTerm = new MSTerminal();
-
   const body = document.querySelector("body") as HTMLBodyElement;
-  const mainFile = body.getAttribute("data-src-file");
-  if (typeof mainFile !== "string") {
+  const fileName = body.getAttribute("data-src-file");
+  if (typeof fileName !== "string") {
     throw new Error("No source file specified!");
   }
 
-  fetch(mainFile).then((response) => {
-    return response.text();
-  }).then((srcCode: string) => {
-    msTerm.runCode(srcCode, mainFile);
-  });
+  const [basePath, srcFile] = HttpFileSystem.splitPathAndFileName(fileName);
+  const fileSystem = new HttpFileSystem(basePath);
+  const mainFile = srcFile;
+
+  const msTerm = new MSTerminal(fileSystem);
+  await msTerm.runCode(mainFile);
+  console.log("Finished");
 
 });

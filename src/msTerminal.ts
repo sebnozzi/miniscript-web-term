@@ -1,16 +1,18 @@
 
+import "../node_modules/@xterm/xterm/css/xterm.css";
+
 import { CooperativeRunner, Interpreter } from "miniscript-ts";
 import { Terminal } from "@xterm/xterm";
 import { Readline } from "xterm-readline";
 import { BasicIO } from "./basicIO";
 import { ModuleLoader } from "./moduleLoader";
-import "../node_modules/@xterm/xterm/css/xterm.css";
+import { MSFileSystem } from "./fileSystems/fileSystem";
 
 export class MSTerminal {
 
   interp: Interpreter;
 
-  constructor() {
+  constructor(private fileSystem: MSFileSystem) {
     const outCallback = (txt: string) => {
       console.log(txt);
     }
@@ -23,10 +25,10 @@ export class MSTerminal {
   private addIntrinsics(terminal: Terminal, readline: Readline) {
     const runtime = this.interp.runtime;
 
-    const moduleLoader = new ModuleLoader(this.interp);
+    const moduleLoader = new ModuleLoader(this.interp, this.fileSystem);
     const basicIO = new BasicIO(terminal, readline);
 
-    moduleLoader.addIntrinsics(runtime);
+    moduleLoader.addIntrinsics();
     basicIO.addIntrinsics(runtime);
   }
 
@@ -53,21 +55,26 @@ export class MSTerminal {
     return [term, rl];
   }
 
-  runCode(srcCode: string, fileName: string) {
-    const coopRunner = this.interp.getCooperativeRunner(srcCode, fileName);
-    if (coopRunner) {
-      this.runCycles(coopRunner);
-    }
+  async runCode(mainFile: string): Promise<void> {
+    return new Promise<void>(async (resolve) => {
+      const srcCode = await this.fileSystem.getSource(mainFile);
+      const coopRunner = this.interp.getCooperativeRunner(srcCode, mainFile);
+      if (coopRunner) {
+        this.runCycles(coopRunner, () => {
+          resolve();
+        });
+      }
+    });
   }
 
-  private runCycles(coopRunner: CooperativeRunner) {
+  private runCycles(coopRunner: CooperativeRunner, onFinished: () => void) {
     if (!coopRunner.isFinished()) {
       coopRunner.runSomeCycles();
       setTimeout(() => {
-        this.runCycles(coopRunner);
+        this.runCycles(coopRunner, onFinished);
       }, 0);
     } else {
-      console.log("Finished");
+      onFinished();
     }
   }
 
