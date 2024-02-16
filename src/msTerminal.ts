@@ -1,14 +1,9 @@
-///<reference path='../node_modules/jquery.terminal/js/jquery.terminal.d.ts' />
 
 import { CooperativeRunner, Interpreter } from "miniscript-ts";
+import { Terminal } from "@xterm/xterm";
+import { Readline } from "xterm-readline";
 import { BasicIO } from "./basicIO";
 import { ModuleLoader } from "./moduleLoader";
-
-
-// Extend official type, which is missing the "width" parameter
-type TOptions = JQueryTerminal.TerminalOptions & {
-  width?: number
-};
 
 
 export class MSTerminal {
@@ -21,42 +16,41 @@ export class MSTerminal {
     }
     this.interp = new Interpreter(outCallback, outCallback);
     
-    const jqTerm = this.setupTerminal();
-    this.addIntrinsics(jqTerm);
+    const [terminal, readine] = this.setupTerminal();
+    this.addIntrinsics(terminal, readine);
   }
 
-  private addIntrinsics(jqTerm: JQueryTerminal) {
+  private addIntrinsics(terminal: Terminal, readline: Readline) {
     const runtime = this.interp.runtime;
 
     const moduleLoader = new ModuleLoader(this.interp);
-    const basicIO = new BasicIO(jqTerm);
+    const basicIO = new BasicIO(terminal, readline);
 
     moduleLoader.addIntrinsics(runtime);
     basicIO.addIntrinsics(runtime);
   }
 
-  private setupTerminal(): JQueryTerminal {
-    const options = {
-      name: 'ms_terminal',
-      width: 800,
-      height: 600,
-      prompt: '] ',
-      greetings: ""
-    } as TOptions;
+  private setupTerminal(): [Terminal, Readline] {
+    const rl = new Readline();
+    const term = new Terminal({
+      /*
+      theme: {
+            background: "#191A19",
+            foreground: "#F5F2E7",
+      },*/
+      cursorBlink: true,
+      cursorStyle: "block"
+    });
 
-    const jq = $("#term_demo") as JQuery;
-    const jqTerm = jq.terminal((_: string) => {
-      // Don't do anything with the "command".
-      // The "input" intrinsic passes the value 
-      // back to the MiniScript machinery.
-    }, options);
+    
+    const container = document.getElementById('term_demo') as HTMLElement;
 
-    // Initially pause the terminal until we explicitly tell it
-    // to accept input, for the brief period of time in which the
-    // "input" intrinsic is active.
-    jqTerm.pause();
+    term.loadAddon(rl);
+    term.open(container);
 
-    return jqTerm;
+    term.focus();
+
+    return [term, rl];
   }
 
   runCode(srcCode: string, fileName: string) {

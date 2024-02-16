@@ -1,9 +1,12 @@
 import { Runtime } from "miniscript-ts";
+import { Terminal } from "@xterm/xterm";
+import { Readline } from "xterm-readline";
 
 export class BasicIO {
   
   constructor(
-    private jqTerm: JQueryTerminal) {
+    private xterm: Terminal,
+    private readline: Readline) {
 
   }
 
@@ -28,22 +31,19 @@ export class BasicIO {
     }
 
     if (delim !== null && delim !== "\n" && delim !== "\r") {
-      const options = {newline: false};
       txt = txt + delim;
-      this.jqTerm.echo(txt, options);
+      this.xterm.write(txt);
     } else {
-      this.jqTerm.echo(txt);
+      this.xterm.writeln(txt);
     }
 
   }
 
   private async input(prompt: string | null): Promise<string> {
-    this.jqTerm.resume();
     if (prompt === null) {
       prompt = "";
     }
-    return this.jqTerm.read(prompt).then((txt) => {
-      this.jqTerm.pause();
+    return this.readline.read(prompt).then((txt) => {
       return txt;
     });
   }
