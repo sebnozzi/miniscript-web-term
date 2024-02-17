@@ -2,11 +2,11 @@
 
 MiniScript terminal for the Web.
 
-It allows you to write MiniScript programs that run on a web-terminal. Intrinsics like `print` and `input` interact directly with the terminal. 
+It allows you to write [MiniScript](https://miniscript.org/) programs that run on a web-terminal. Intrinsics like `print` and `input` interact directly with the terminal. 
 
 The terminal component is [xterm.js](http://xtermjs.org/). As such it supports all [escape sequences](http://xtermjs.org/docs/api/vtfeatures/) that xterm.js is capable of.
 
-The MiniScript implementation also supports module `import`, either local modules or "lib" modules. Included are the [same modules](https://github.com/JoeStrout/miniscript/tree/master/MiniScript-cpp/lib) as "command-line" MiniScript.
+The [MiniScript implementation](https://github.com/sebnozzi/miniscript.ts) also supports module `import`, either local modules or "lib" modules. Included are the [same modules](https://github.com/JoeStrout/miniscript/tree/master/MiniScript-cpp/lib) as "command-line" MiniScript.
 
 ## Usage
 
@@ -33,4 +33,4 @@ And if you put it in a sub-folder it would read:
 
 You can then serve the contents locally (e.g. with `python3 -m http.server 8080`) or zip them and upload somewhere (e.g. to itch.io).
 
-Feel free to explore and/or remove the example folder before publishing.
+Feel free to explore and/or remove the [example folder](./example) before publishing.
