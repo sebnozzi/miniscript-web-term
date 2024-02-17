@@ -31,6 +31,33 @@ And if you put it in a sub-folder it would read:
 <body data-src-file="src/myProgram.ms">
 ```
 
-You can then serve the contents locally (e.g. with `python3 -m http.server 8080`) or zip them and upload somewhere (e.g. to itch.io).
+You can then serve the contents locally (e.g. with `python3 -m http.server 8000`) or zip them and upload somewhere (e.g. to itch.io).
 
-Feel free to explore and/or remove the [example folder](./example) before publishing.
+Feel free to explore the [example folder](./example) folder. You might want to remove it before publishing.
+
+## Building from source
+
+To build from source make sure you have [Node.js](https://nodejs.org) installed.
+
+Then from the project's root folder:
+
+```
+npm install
+npm run build
+```
+
+Once build you can serve the contents locally.
+
+## Serve locally
+
+To serve locally, your could use Python's built-in web-server:
+
+```
+python3 -m http.server 8000
+```
+
+Alternatively you could consider either of these:
+
+* https://www.npmjs.com/package/local-web-server
+* https://www.npmjs.com/package/http-server
+* https://caddyserver.com/
