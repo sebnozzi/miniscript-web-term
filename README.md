@@ -2,6 +2,8 @@
 
 MiniScript terminal for the Web.
 
+![Screenshot of terminal styles](./screenshot.png)
+
 It allows you to write [MiniScript](https://miniscript.org/) programs that run on a web-terminal. Intrinsics like `print` and `input` interact directly with the terminal. 
 
 The terminal component is [xterm.js](http://xtermjs.org/). As such it supports all [escape sequences](http://xtermjs.org/docs/api/vtfeatures/) that xterm.js is capable of.
