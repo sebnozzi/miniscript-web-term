@@ -45,7 +45,7 @@ export class MSTerminal {
     });
 
     
-    const container = document.getElementById('term_demo') as HTMLElement;
+    const container = document.getElementById('terminal') as HTMLElement;
 
     term.loadAddon(rl);
     term.open(container);
