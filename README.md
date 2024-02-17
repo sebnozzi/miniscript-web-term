@@ -6,7 +6,7 @@ It allows you to write [MiniScript](https://miniscript.org/) programs that run o
 
 The terminal component is [xterm.js](http://xtermjs.org/). As such it supports all [escape sequences](http://xtermjs.org/docs/api/vtfeatures/) that xterm.js is capable of.
 
-The [MiniScript implementation](https://github.com/sebnozzi/miniscript.ts) also supports module `import`, either local modules or "lib" modules. Included are the [same modules](https://github.com/JoeStrout/miniscript/tree/master/MiniScript-cpp/lib) as "command-line" MiniScript.
+The [MiniScript implementation](https://github.com/sebnozzi/miniscript.ts) is extended to supports module `import` (either local modules or "lib" modules). Included are the [same modules](https://github.com/JoeStrout/miniscript/tree/master/MiniScript-cpp/lib) as "command-line" MiniScript.
 
 ## Usage
 
