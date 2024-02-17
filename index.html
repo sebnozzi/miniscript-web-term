@@ -4,7 +4,21 @@
   <link rel="shortcut icon" href="#">
   <title>MiniScript Web-Terminal</title> 
   <link rel="stylesheet" href="dist/miniscript-web-term.css"/>
+  <script>
+    // You can set Terminal options as documented here:
+    // https://xtermjs.org/docs/api/terminal/classes/terminal/#constructor
+    window.terminalOptions = {
+      theme: {
+        background: "#191A19",
+        foreground: "#F5F2E7",
+      },
+      // fontSize: 16,
+      // cursorBlink: true, // does not seem to work
+      cursorStyle: "block"
+    };
+  </script>
 </head>
+<!-- Change the location of your entry MiniScript file below -->
 <body data-src-file="example/main.ms">
   <div id="terminal"></div>
   <script src="dist/miniscript-web-term.js"></script>

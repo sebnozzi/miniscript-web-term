@@ -37,6 +37,27 @@ You can then serve the contents locally (e.g. with `python3 -m http.server 8000`
 
 Feel free to explore the [example folder](./example) folder. You might want to remove it before publishing.
 
+## Terminal Options
+
+You can set / change the terminal options by declaring a (window) global `terminalOptions` variable according to the [ITerminalOptions](https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/) and [ITerminalInitOnlyOptions](https://xtermjs.org/docs/api/terminal/interfaces/iterminalinitonlyoptions/) interfaces.
+
+For example:
+
+```javascript
+window.terminalOptions = {
+  theme: {
+    background: "#191A19",
+    foreground: "#F5F2E7",
+  },
+  fontSize: 16,
+  cursorStyle: "block"
+};
+```
+
+The included "index.html" already sets some options, so that you only need to adapt them as needed. 
+
+You can even remove the whole "script" section. In that case the default options will apply.
+
 ## Building from source
 
 To build from source make sure you have [Node.js](https://nodejs.org) installed.

@@ -2,23 +2,25 @@
 import "../node_modules/@xterm/xterm/css/xterm.css";
 
 import { CooperativeRunner, Interpreter } from "miniscript-ts";
-import { Terminal } from "@xterm/xterm";
+import { ITerminalInitOnlyOptions, ITerminalOptions, Terminal } from "@xterm/xterm";
 import { Readline } from "xterm-readline";
 import { BasicIO } from "./basicIO";
 import { ModuleLoader } from "./moduleLoader";
 import { MSFileSystem } from "./fileSystems/fileSystem";
 
+export type TerminalOptions = ITerminalOptions & ITerminalInitOnlyOptions;
+
 export class MSTerminal {
 
   interp: Interpreter;
 
-  constructor(private fileSystem: MSFileSystem) {
+  constructor(private fileSystem: MSFileSystem, terminalOptions?: TerminalOptions) {
     const outCallback = (txt: string) => {
       console.log(txt);
     }
     this.interp = new Interpreter(outCallback, outCallback);
     
-    const [terminal, readine] = this.setupTerminal();
+    const [terminal, readine] = this.setupTerminal(terminalOptions);
     this.addIntrinsics(terminal, readine);
   }
 
@@ -32,18 +34,9 @@ export class MSTerminal {
     basicIO.addIntrinsics(runtime);
   }
 
-  private setupTerminal(): [Terminal, Readline] {
+  private setupTerminal(options?: TerminalOptions): [Terminal, Readline] {
     const rl = new Readline();
-    const term = new Terminal({
-      /*
-      theme: {
-            background: "#191A19",
-            foreground: "#F5F2E7",
-      },*/
-      cursorBlink: true,
-      cursorStyle: "block"
-    });
-
+    const term = new Terminal(options);
     
     const container = document.getElementById('terminal') as HTMLElement;
 

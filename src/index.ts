@@ -1,6 +1,10 @@
 
-import { MSTerminal } from "./msTerminal";
+import { MSTerminal, TerminalOptions } from "./msTerminal";
 import { HttpFileSystem } from "./fileSystems/httpFileSystem";
+
+declare global {
+  interface Window { terminalOptions: TerminalOptions | undefined; }
+}
 
 addEventListener("DOMContentLoaded", async (_: Event) => {
 
@@ -10,11 +14,13 @@ addEventListener("DOMContentLoaded", async (_: Event) => {
     throw new Error("No source file specified!");
   }
 
+  const terminalOptions = window.terminalOptions;
+
   const [basePath, srcFile] = HttpFileSystem.splitPathAndFileName(fileName);
   const fileSystem = new HttpFileSystem(basePath);
   const mainFile = srcFile;
 
-  const msTerm = new MSTerminal(fileSystem);
+  const msTerm = new MSTerminal(fileSystem, terminalOptions);
   await msTerm.runCode(mainFile);
   console.log("Finished");
 
