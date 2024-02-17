@@ -10,7 +10,7 @@ The MiniScript implementation also supports module `import`, either local module
 
 ## Usage
 
-Download one of the latest releases from a successful build in the "Actions" of the GitHub project.
+Download one of the latest [releases](https://github.com/sebnozzi/miniscript-web-term/releases) (the file `miniscript-web-term.zip`).
 
 It consists of an "index.html" page and additional files / folders, among them the "lib" folder with "command-line" MiniScript modules.
 
