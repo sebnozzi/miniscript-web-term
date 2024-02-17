@@ -27,3 +27,4 @@ jobs:
             dist
             example
             LICENSE.txt
+            README.md
