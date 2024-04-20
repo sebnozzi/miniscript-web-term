@@ -16,8 +16,11 @@ addEventListener("DOMContentLoaded", async (_: Event) => {
 
   const terminalOptions = window.terminalOptions;
 
-  const [basePath, srcFile] = HttpFileSystem.splitPathAndFileName(fileName);
-  const fileSystem = new HttpFileSystem(basePath);
+  const [scriptBasePath, srcFile] = HttpFileSystem.splitPathAndFileName(fileName);
+  const indexBasePath = new URL(document.baseURI).pathname.split("/").slice(0,-1).join("/");
+  console.log("Using script base-path:", scriptBasePath);
+  console.log("Using index base-path:", indexBasePath);
+  const fileSystem = new HttpFileSystem(indexBasePath, scriptBasePath);
   const mainFile = srcFile;
 
   const msTerm = new MSTerminal(fileSystem, terminalOptions);

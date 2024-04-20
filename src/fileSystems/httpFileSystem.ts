@@ -9,7 +9,7 @@ export class HttpFileSystem extends MSFileSystem {
     return [path, fileName];
   }
 
-  constructor(private basePath: string) {
+  constructor(private indexBasePath: string, private scriptBasePath: string) {
     super();
   }
 
@@ -27,9 +27,9 @@ export class HttpFileSystem extends MSFileSystem {
   private getAbsolutePath(filePath: string) {
     let absolutePath: string;
     if (filePath.startsWith("/")) {
-      absolutePath = filePath;
+      absolutePath = this.indexBasePath + filePath;
     } else {
-      absolutePath = this.basePath + "/" + filePath;
+      absolutePath = this.scriptBasePath + "/" + filePath;
     }
     return absolutePath;
   }
