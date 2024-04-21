@@ -37,6 +37,18 @@ You can then serve the contents locally (e.g. with `python3 -m http.server 8000`
 
 Feel free to explore the [example folder](./example) folder. You might want to remove it before publishing.
 
+## Publishing
+
+In order to "publish" a project (e.g. to [itch.io](https://www.itch.io)) you probably need to create a zip file containing the following:
+
+* index.html
+* the "dist/" folder
+* the "lib/" folder (to use built-in modules)
+* any other files / folders that your project uses
+  (in particular your MiniScript source files)
+
+Remember to adapt "index.html" accordingly.
+
 ## Terminal Options
 
 You can set / change the terminal options by declaring a (window) global `terminalOptions` variable according to the [ITerminalOptions](https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/) and [ITerminalInitOnlyOptions](https://xtermjs.org/docs/api/terminal/interfaces/iterminalinitonlyoptions/) interfaces.
