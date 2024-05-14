@@ -6,12 +6,33 @@ declare global {
   interface Window { terminalOptions: TerminalOptions | undefined; }
 }
 
+export async function runCodeFromPath(fileSystem, scriptFile) {
+  const msTerm = new MSTerminal(fileSystem, window.terminalOptions);
+  await msTerm.runCodeFromPath(scriptFile);
+  console.log("Finished");
+}
+
+export async function runCodeFromString(sourceCode: string, fileSystem?:FileSystem) {
+  console.log("Running code:\n" + sourceCode);
+  if (!fileSystem) {
+    fileSystem = new HttpFileSystem('', '');
+  }
+  const msTerm = new MSTerminal(fileSystem, window.terminalOptions);
+  await msTerm.runCodeFromString(sourceCode);
+  console.log("Finished");
+}
+
+// Export functions to the global scope
+window.runCodeFromPath = runCodeFromPath;
+window.runCodeFromString = runCodeFromString;
+
 addEventListener("DOMContentLoaded", async (_: Event) => {
 
   const body = document.querySelector("body") as HTMLBodyElement;
   const fileName = body.getAttribute("data-src-file");
   if (typeof fileName !== "string") {
-    throw new Error("No source file specified!");
+    console.log("No source file specified on body tag");
+    return;
   }
 
   const terminalOptions = window.terminalOptions;
@@ -21,10 +42,7 @@ addEventListener("DOMContentLoaded", async (_: Event) => {
   console.log("Using script base-path:", scriptBasePath);
   console.log("Using index base-path:", indexBasePath);
   const fileSystem = new HttpFileSystem(indexBasePath, scriptBasePath);
-  const mainFile = srcFile;
-
-  const msTerm = new MSTerminal(fileSystem, terminalOptions);
-  await msTerm.runCode(mainFile);
-  console.log("Finished");
-
+  
+  runCodeFromPath(fileSystem, srcFile);
 });
+

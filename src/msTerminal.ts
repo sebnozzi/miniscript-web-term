@@ -48,9 +48,20 @@ export class MSTerminal {
     return [term, rl];
   }
 
-  async runCode(mainFile: string): Promise<void> {
+  async runCodeFromPath(mainFile: string): Promise<void> {
     return new Promise<void>(async (resolve) => {
       const srcCode = await this.fileSystem.getSource(mainFile);
+      const coopRunner = this.interp.getCooperativeRunner(srcCode, mainFile);
+      if (coopRunner) {
+        this.runCycles(coopRunner, () => {
+          resolve();
+        });
+      }
+    });
+  }
+
+  async runCodeFromString(srcCode: string): Promise<void> {
+    return new Promise<void>(async (resolve) => {
       const coopRunner = this.interp.getCooperativeRunner(srcCode, mainFile);
       if (coopRunner) {
         this.runCycles(coopRunner, () => {
