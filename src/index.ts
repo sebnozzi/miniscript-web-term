@@ -6,20 +6,24 @@ declare global {
   interface Window { terminalOptions: TerminalOptions | undefined; }
 }
 
+let msTerm: MSTerminal | null = null;
+
 export async function runCodeFromPath(fileSystem, scriptFile) {
-  const msTerm = new MSTerminal(fileSystem, window.terminalOptions);
+  if (!msTerm) msTerm = new MSTerminal(fileSystem, window.terminalOptions);
   await msTerm.runCodeFromPath(scriptFile);
-  console.log("Finished");
 }
 
 export async function runCodeFromString(sourceCode: string, fileSystem?:FileSystem) {
-  console.log("Running code:\n" + sourceCode);
   if (!fileSystem) {
     fileSystem = new HttpFileSystem('', '');
   }
-  const msTerm = new MSTerminal(fileSystem, window.terminalOptions);
-  await msTerm.runCodeFromString(sourceCode);
-  console.log("Finished");
+  if (!msTerm) msTerm = new MSTerminal(fileSystem, window.terminalOptions);
+  try {
+	  await msTerm.runCodeFromString(sourceCode);
+  } catch (err) {
+	  console.log("error caught");
+  	  msTerm.terminal.writeln("Error found");
+  }
 }
 
 // Export functions to the global scope
@@ -39,8 +43,6 @@ addEventListener("DOMContentLoaded", async (_: Event) => {
 
   const [scriptBasePath, srcFile] = HttpFileSystem.splitPathAndFileName(fileName);
   const indexBasePath = new URL(document.baseURI).pathname.split("/").slice(0,-1).join("/");
-  console.log("Using script base-path:", scriptBasePath);
-  console.log("Using index base-path:", indexBasePath);
   const fileSystem = new HttpFileSystem(indexBasePath, scriptBasePath);
   
   runCodeFromPath(fileSystem, srcFile);
