@@ -10,6 +10,7 @@ let msTerm: MSTerminal | null = null;
 
 export async function runCodeFromPath(fileSystem, scriptFile) {
   if (!msTerm) msTerm = new MSTerminal(fileSystem, window.terminalOptions);
+  window.xterm = msTerm.terminal;
   await msTerm.runCodeFromPath(scriptFile);
 }
 
@@ -18,12 +19,17 @@ export async function runCodeFromString(sourceCode: string, fileSystem?:FileSyst
     fileSystem = new HttpFileSystem('', '');
   }
   if (!msTerm) msTerm = new MSTerminal(fileSystem, window.terminalOptions);
+  window.xterm = msTerm.terminal;
   try {
 	  await msTerm.runCodeFromString(sourceCode);
   } catch (err) {
 	  console.log("error caught");
   	  msTerm.terminal.writeln("Error found");
   }
+}
+
+export function xterm() {
+	return msTerm.terminal;
 }
 
 // Export functions to the global scope
