@@ -28,10 +28,6 @@ export async function runCodeFromString(sourceCode: string, fileSystem?:FileSyst
   }
 }
 
-export function xterm() {
-	return msTerm.terminal;
-}
-
 // Export functions to the global scope
 window.runCodeFromPath = runCodeFromPath;
 window.runCodeFromString = runCodeFromString;

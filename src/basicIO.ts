@@ -25,10 +25,13 @@ export class BasicIO {
   }
 
   private print(txt: string, delim: string | null) {
-
+	console.log("print called with ", txt);
     if (txt === undefined || txt === null) {
       txt = "";
-    }
+	} else if (typeof txt !== "string") {
+	  console.log("Converting from ", typeof txt);
+	  txt = txt.toString();
+	}
 
     if (delim !== null && delim !== "\n" && delim !== "\r") {
       txt = txt + delim;
