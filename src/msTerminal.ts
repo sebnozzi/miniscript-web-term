@@ -70,7 +70,7 @@ export class MSTerminal {
 		  if (err) reject(err); else resolve();
 		});
 	  } else {
-		console.logError("runCodeFromString: unable to get coopRunner");
+		//console.error("runCodeFromString: unable to get coopRunner");
 		reject(new Error("Unable to get coopRunner"));
 	  }
     });

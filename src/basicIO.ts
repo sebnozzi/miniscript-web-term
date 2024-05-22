@@ -13,33 +13,20 @@ export class BasicIO {
   addIntrinsics(runtime: Runtime) {
     const outerThis = this;
 
-    runtime.addIntrinsic('print(txt,delim=null)',
-    function(txt: string, delim: string | null) {
-      outerThis.print(txt, delim);
-    });
-
-    runtime.addIntrinsic('input(prompt=null)',
+	runtime.addIntrinsic('input(prompt=null)',
     function(prompt: string | null): Promise<string> {
       return outerThis.input(prompt);
     });
-  }
-
-  private print(txt: string, delim: string | null) {
-	console.log("print called with ", txt);
-    if (txt === undefined || txt === null) {
-      txt = "";
-	} else if (typeof txt !== "string") {
-	  console.log("Converting from ", typeof txt);
-	  txt = txt.toString();
-	}
-
-    if (delim !== null && delim !== "\n" && delim !== "\r") {
-      txt = txt + delim;
-      this.xterm.write(txt);
-    } else {
-      this.xterm.writeln(txt);
-    }
-
+    
+    runtime.addIntrinsic('version',
+    function(): any {
+		var result = runtime.newMap();
+		result.set("miniscript", "1.6.2");
+		result.set("buildDate", "1900-04-01");
+		result.set("hostName", "miniscript-tryit");
+		result.set("hostInfo", "https://github.com/JoeStrout/miniscript-tryit");
+		return result;
+    });
   }
 
   private async input(prompt: string | null): Promise<string> {
