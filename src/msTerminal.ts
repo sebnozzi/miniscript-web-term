@@ -13,15 +13,17 @@ export type TerminalOptions = ITerminalOptions & ITerminalInitOnlyOptions;
 export class MSTerminal {
 
   interp: Interpreter;
+  terminal: Terminal;
 
   constructor(private fileSystem: MSFileSystem, terminalOptions?: TerminalOptions) {
     const outCallback = (txt: string) => {
-      console.log(txt);
+      this.terminal.writeln(txt);
     }
     this.interp = new Interpreter(outCallback, outCallback);
     
     const [terminal, readine] = this.setupTerminal(terminalOptions);
     this.addIntrinsics(terminal, readine);
+    this.terminal = terminal;
   }
 
   private addIntrinsics(terminal: Terminal, readline: Readline) {
@@ -48,24 +50,41 @@ export class MSTerminal {
     return [term, rl];
   }
 
-  async runCode(mainFile: string): Promise<void> {
+  async runCodeFromPath(mainFile: string): Promise<void> {
     return new Promise<void>(async (resolve) => {
       const srcCode = await this.fileSystem.getSource(mainFile);
       const coopRunner = this.interp.getCooperativeRunner(srcCode, mainFile);
       if (coopRunner) {
-        this.runCycles(coopRunner, () => {
-          resolve();
+        this.runCycles(coopRunner, (err) => {
+          if (err) reject(err); else resolve();
         });
       }
     });
   }
 
-  private runCycles(coopRunner: CooperativeRunner, onFinished: () => void) {
+  async runCodeFromString(srcCode: string): Promise<void> {
+    return new Promise<void>(async (resolve) => {
+	  const coopRunner = this.interp.getCooperativeRunner(srcCode, null);
+	  if (coopRunner) {
+		this.runCycles(coopRunner, (err) => {
+		  if (err) reject(err); else resolve();
+		});
+	  } else {
+		//console.error("runCodeFromString: unable to get coopRunner");
+		reject(new Error("Unable to get coopRunner"));
+	  }
+    });
+  }
+
+  private runCycles(coopRunner: CooperativeRunner, onFinished: (err?: Error) => void) {
     if (!coopRunner.isFinished()) {
-      coopRunner.runSomeCycles();
-      setTimeout(() => {
-        this.runCycles(coopRunner, onFinished);
-      }, 0);
+      try {
+        coopRunner.runSomeCycles();
+        setTimeout(() => { this.runCycles(coopRunner, onFinished); }, 0);
+      } catch (err) {
+        console.log('caught error in runCycles');
+        onFinished(err);
+      }
     } else {
       onFinished();
     }

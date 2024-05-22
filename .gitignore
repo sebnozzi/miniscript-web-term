@@ -1,3 +1,4 @@
 node_modules
 dist
 _local
+.DS_Store
