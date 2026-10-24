@@ -1,7 +1,6 @@
 // String Utilities.
 //	This module adds some additional methods to the `string` type.
 
-
 // Small words we don't capitalize in titleCase.
 // This set is from the U.S. Government Printing Office Style Manual:
 smallWords = ["a", "an", "the", "at", "by", "for", "in", "of", "on", "to", "up", "and", "as", "but", "or", "nor"]
@@ -54,6 +53,61 @@ end function
 // contains: return true if this string contains the given substring anywhere.
 string.contains = function(s)
 	return self.indexOf(s) != null
+end function
+
+// isNumeric: returns true if this string is a valid number like "-3.1415".
+// You should be able to get a valid value out of val() whenever this is true.
+string.isNumeric = function
+	state = "PRENUM"
+	for c in self
+		if state == "PRENUM" then
+			if c <= " " then continue
+			if c == "+" or c == "-" or ("0" <= c <= "9") then
+				state = "WHOLEPART"
+			else if c == "." then
+				state = "DECPART"
+			else
+				return false
+			end if
+		else if state == "WHOLEPART" then
+			if "0" <= c <= "9" then continue
+			if c == "." then
+				state = "DECPART"
+			else if c == "E" then
+				state = "PREEXP"
+			else
+				return false
+			end if
+		else if state == "DECPART" then
+			if "0" <= c <= "9" then continue
+			if c == "E" then state = "PREEXP" else return false
+		else if state == "PREEXP" then
+			if c == "+" or c == "-" or ("0" <= c <= "9") then
+				state = "EXPONENT"
+			else
+				return false
+			end if
+		else if state == "EXPONENT" then
+			if "0" <= c <= "9" then continue
+			return false
+		end if
+	end for
+	return state != "PRENUM" and state != "PREEXP"
+end function
+
+// lastIndexOf: returns the *last* index of the given substring, optionally
+// before a given index.  Returns null if not found.
+// Examples:
+//		"Hello".lastIndexOf("l")		// returns 3
+//		"Hello".lastIndexOf("l", 3)		// returns 2
+string.lastIndexOf = function(substr, beforeIdx=null)
+	sslen = substr.len
+	if beforeIdx == null then i = self.len - sslen else i = beforeIdx - 1
+	while i >= 0
+		if self[i:i+sslen] == substr then return i
+		i -= 1
+	end while
+	return null
 end function
 
 // pad: return this string, padded (and optionally cut) to a desired length.
@@ -109,6 +163,22 @@ string.trimLeft = function(charsToRemove=null)
 		p0 = p0 + 1
 	end while
 	return self[p0:]
+end function
+
+// string.compress: replaces any runs of a given character with a 
+// single instance of that character.
+// Example:
+//		"Hi!!! Bob!!".compress("!")  // returns "Hi! Bob!"
+string.compress = function(charToCompress=" ")
+	s = self
+	prevLen = -1
+	charTimes2 = charToCompress + charToCompress
+	while true
+		s = s.replace(charTimes2, charToCompress)
+		if s.len == prevLen then break
+		prevLen = s.len
+	end while
+	return s
 end function
 
 // ellideEnd: shortens a string (if needed) by cutting and adding
@@ -170,7 +240,7 @@ string.wrap = function(width=67)
 				break
 			end if
 			foundCut = false
-			for i in range(width, 0)
+			for i in range(width, 0, -1)
 				if s[i] == " " then
 					result.push s[:i]
 					s = s[i+1:]
@@ -217,6 +287,87 @@ string.rot13 = function
 	end if
 	return self.cipher(rot13map)
 end function
+
+// hexStr: convert an integer value to a hexadecimal string.
+// Returns any negative value as "0" (padded to the given number
+// of digits).  Oversized values will return more digits than
+// padToLength.  Example:
+//   hexStr(123, 4) --> "007B"
+hexStr = function(val, padToLength=2, lowercase=false)
+	digits = "0123456789ABCDEF"
+	val = floor(val)
+	if val < 0 then return "0" * padToLength
+	result = []
+	while val > 0
+		result.insert 0, digits[val % 16]
+		val = floor(val / 16)
+	end while
+	result = result.join("")
+	if result.len < padToLength then result = "0" * (padToLength - result.len) + result
+	if lowercase then result = result.lower
+	return result
+end function
+
+// HexVal: convert a hexadecimal string to a number.
+// Example:
+//	hexVal("007B") --> 123
+hexVal = function(hexstr)
+	result = 0
+	digits = "0123456789ABCDEF"
+	for c in hexstr
+		cval = digits.indexOf(c.upper)
+		if cval < 0 then break
+		result = result * 16 + cval
+	end for
+	return result
+end function
+
+
+if intrinsics.hasIndex("RawData") then
+	
+	// urlEncode: Encode a string so it can be used as a URL query
+	// parameter.
+	string.urlEncode = function
+		urlSafeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+		  "abcdefghijklmnopqrstuvwxyz0123456789-_.~"
+		bytes = new RawData
+		bytes.resize self.len * 3
+		len = bytes.setUtf8(0, self)
+		result = []
+		for i in range(0, len-1)
+			b = bytes.byte(i)
+			c = char(b)
+			if urlSafeChars.contains(c) then
+				result.push c
+			else
+				result.push "%" + hexStr(b, 2)
+			end if
+		end for
+		return result.join("")
+	end function
+	
+	// urlDecode: convert a URL-encoded string back into plain text.
+	string.urlDecode = function
+		bytes = new RawData
+		bytes.resize self.len + 2 * (self.split("%").len - 1)
+		i = 0		// where we are in self (input)
+		j = 0		// where we are in bytes (output)
+		while i < self.len
+			c = self[i]
+			if c == "%" then
+				hexStr = self[i+1:i+3]
+				i = i + 3
+				bytes.setByte j, hexVal(hexStr)
+			else
+				bytes.setByte j, c.code
+				i = i + 1
+			end if
+			j = j + 1
+		end while
+		return bytes.utf8(0, j)
+	end function
+
+end if
 
 // between: find a string between two substrings.  This can be 
 // used, for example, to find text between two HTML tags.
@@ -288,7 +439,11 @@ end function
 string.fill = function(args)
 	s = self
 	for idx in args.indexes
-		s = s.replace("{" + idx + "}", args[idx])
+		key = "{" + idx + "}"
+		value = @args[idx]
+		if @value isa string or s.indexOf(key) != null then
+			s = s.replace(key, value)
+		end if
 	end for
 	return s
 end function
@@ -382,6 +537,29 @@ runUnitTests = function
 	assertEqual "hello world".contains("lo"), true
 	assertEqual "hi".contains("hello"), false
 	
+	testing = "isNumeric"
+	assertEqual "hello".isNumeric, false
+	assertEqual "3.14abc".isNumeric, false
+	assertEqual "abc3.14".isNumeric, false
+	assertEqual "".isNumeric, false
+	assertEqual "3.14".isNumeric, true
+	assertEqual "-3.14".isNumeric, true
+	assertEqual "+3.14".isNumeric, true
+	assertEqual "3.14E6".isNumeric, true
+	assertEqual "-3.14E-6".isNumeric, true
+	assertEqual "  -3E-6".isNumeric, true
+	
+	assertEqual hexStr(123, 4), "007B"
+	assertEqual hexVal("07b"), 123
+	
+	testing = "lastIndexOf"
+	assertEqual "Hello world".lastIndexOf("l"), 9
+	assertEqual "Hello world".lastIndexOf("l", 9), 3
+	assertEqual "Hello world".lastIndexOf("l", 3), 2
+	assertEqual "Hello world".lastIndexOf("l", 2), null
+	assertEqual "big billy".lastIndexOf("bi"), 4
+	assertEqual "big billy".lastIndexOf("bi", 4), 0
+		
 	testing = "pad"
 	assertEqual "foo".pad(5), "foo  "
 	assertEqual "foo".pad(2), "fo"
@@ -401,6 +579,14 @@ runUnitTests = function
 	testing = "trimLeft";	assertEqual s.trimLeft, s
 	testing = "trimRight";	assertEqual s.trimRight, s
 	
+	testing = "compress"
+	s = "Hi....  Bob.  SHHH"
+	assertEqual s.compress, "Hi.... Bob. SHHH"
+	assertEqual s.compress("."), "Hi.  Bob.  SHHH"
+	assertEqual s.compress("H"), "Hi....  Bob.  SH"
+	assertEqual "ooOOoo".compress("o"), "oOOo"
+	assertEqual "ooOoo".compress("O"), "ooOoo"
+	
 	testing = "reverse"
 	assertEqual "Hello world!".reverse, "!dlrow olleH"
 	
@@ -419,6 +605,12 @@ runUnitTests = function
 	assertEqual "Now is the time for all good folks to come together".wrap(24),
 	["Now is the time for all", "good folks to come", "together"]
 
+	if intrinsics.hasIndex("RawData") then
+		testing = "urlEncode/urlDecode"
+		assertEqual "Hello François!".urlEncode, "Hello%20Fran%C3%A7ois%21"
+		assertEqual "Hello%20Fran%C3%A7ois%21".urlDecode, "Hello François!"
+	end if
+	
 	testing = "between"
 	s = "foobarbaz"
 	assertEqual s.between("foo","baz"), "bar"

@@ -2,7 +2,7 @@
 //
 // GRFON is a simpler, gentler file format designed to be
 // especially human-editable.
-// https://app.assembla.com/wiki/show/grfon
+// https://github.com/JoeStrout/grfon
 
 // Flag to control whether strings "true" and "false" should be
 // returned as 1 or 0, or left as strings.
@@ -16,7 +16,7 @@ interpretNull = true
 //	for reading GRFON data and converting it to native form.
 //	Example: parse("42")		// returns 42
 parse = function(grfonString)
-	//if grfonString isa RawData then grfonString = grfonString.utf8
+	if intrinsics.hasIndex("RawData") and grfonString isa RawData then grfonString = grfonString.utf8
 	p = new Parser
 	return p.parse(grfonString)
 end function
@@ -25,11 +25,14 @@ end function
 // Escape any special characters in the given string by preceeding
 // them with backslashes.  In addition: a newline becomes \n; a
 // carriage return becomes \r; and a tab becomes \t.
+// Note that by the special `://` rule, these characters are not escaped,
+// even though in any other combination, `:` and `//` are special.
 escape = function(s)
 	for i in _escapeIndexes
 		s = s.replace(_escapeFrom[i], _escapeTo[i])
 	end for
 	s = s.replace("//", "\/\/")
+	s = s.replace("\:\/\/", "://")
 	return s
 end function
 
@@ -98,7 +101,14 @@ Parser.init = function(source)
 	self._sourceLen = source.len
 end function
 
+// Parser.parse: main entry point for parsing GRFON data.
+//  source may be either a string, or a list of strings.
+//  Returns a MiniScript value: string, number, list, or map.
+//  Note that a collection with some key/value pairs and also
+//	some unkeyed values, will return the unkeyed values as
+//	a list keyed by "_".
 Parser.parse = function(source=null)
+	if source isa list then source = source.join(char(10))
 	if source != null then self.init source
 	self._p = 0
 	return self._parseElement
@@ -107,43 +117,42 @@ end function
 whitespace = " " + char(9) + cr + lf
 Parser._skipWhitespace = function
 	while self._p < self._sourceLen
-		c = self.source[self._p]
-		if c == "/" and self._p+1 < self._sourceLen and self.source[self._p+1] == "/" then
-			// comment; skip to end of line
-			self._p = self._p + 1
+		if self.source[self._p : self._p + 2] == "//" then
 			self._skipToEOL
+		else if whitespace.indexOf(self.source[self._p]) != null then
+			self._p += 1
+		else
 			break
 		end if
-		if whitespace.indexOf(c) == null then break
-		self._p = self._p + 1
 	end while
 end function
 
 Parser._skipToEOL = function
 	while self._p < self._sourceLen
 		c = self.source[self._p]
-		self._p = self._p + 1
+		self._p += 1
 		if c == cr or c == lf then break
 	end while
 end function
 
 Parser._parseElement = function(asValue=false)
 	result = null
+	resultIsKeyedMap = false  // true only when result was built by the ":" branch
 	while true
 		self._skipWhitespace
 		if self._p >= self._sourceLen then return result
-		if self.source[self._p] == "}" then 
+		if self.source[self._p] == "}" then
 			// done with current collection
-			self._p = self._p + 1
+			if not asValue then self._p += 1
 			return result
 		end if
 		if self.source[self._p] == "{" then
 			// nested collection
-			self._p = self._p + 1
+			self._p += 1
 			tok = self._parseElement
 			if tok == null then tok = {}  // (interpret {} as an empty map)
 			if self._p < self._sourceLen and self.source[self._p] == "{" then
-				self._p = self._p + 1
+				self._p += 1
 			end if
 		else
 			tok = self._parseValue
@@ -154,17 +163,19 @@ Parser._parseElement = function(asValue=false)
 		self._skipWhitespace
 		if self._p < self._sourceLen then next = self.source[self._p]
 		if next == ":" then			// key:value pair
-			self._p = self._p + 1		// skip colon
+			self._p += 1		// skip colon
 			tok2 = self._parseElement(true)
 			if result == null then
 				result = {}
+				resultIsKeyedMap = true
 			else if result isa list then
 				result = {"_": result}
+				resultIsKeyedMap = true
 			end if
 			result[tok] = tok2
 			self._skipWhitespace
 			if self._p < self._sourceLen and self.source[self._p] == ";" then
-				self._p = self._p + 1
+				self._p += 1
 			end if
 		else if next == ";" then	// new collection element
 			if result == null then
@@ -174,19 +185,21 @@ Parser._parseElement = function(asValue=false)
 			else
 				result["_"].push tok
 			end if
-			self._p = self._p + 1		// skip semicolon
+			self._p += 1		// skip semicolon
 		else
 			if result == null then
 				result = tok
 			else if result isa list then
 				result.push tok
-			else if result isa map then
+			else if result isa map and resultIsKeyedMap then
+				// Mixed keyed+unkeyed collection: accumulate unkeyed items under "_"
 				if result.hasIndex("_") then
 					result["_"].push tok
 				else
 					result["_"] = [tok]
 				end if
 			else
+				// result is a primitive or an unkeyed sub-collection — make a list
 				result = [result, tok]
 			end if
 			if next == "" then return result
@@ -198,38 +211,56 @@ Parser._parseValue = function
 	self._skipWhitespace
 	if self._p >= self._sourceLen then return null
 	c = self.source[self._p]
-	s = self._parseString
+	if c == "}" then return null
+	strAndEsc = self._getStringAndEsc()
+	s = strAndEsc[0]
 	if interpretTrueAndFalse then
 		if s == "true" then return true
 		if s == "false" then return false
 	end if
 	if interpretNull and s == "null" then return null
-	numVal = val(s)
-	if s == "0" or numVal != 0 then return numVal
+	if strAndEsc[1] then
+		s = unescape(s)
+	else
+		numVal = val(s)
+		if s == "0" or numVal != 0 then return numVal
+	end if
 	return s
 end function
 
 // Get a string literal from the source.  Stop at the delimiter
 // so the caller can see if it is a ":" or "}" or whatever.
+// Return [raw string, anyEscape].
 _delims = ":;}" + cr + lf
-Parser._parseString = function
+Parser._getStringAndEsc = function
 	startPos = self._p
 	anyEscape = false
 	while self._p < self._sourceLen
 		c = self.source[self._p]
+		if c == ":" and self.source[self._p:self._p+3] == "://" then
+			self._p += 3
+			continue
+		end if
 		if _delims.indexOf(c) != null then break
-		if c == "/" and self._p+1 < self._sourceLen and self.source[self._p+1] == "/" then break
-		self._p = self._p + 1
+		if c == "/" and self.source[self._p:self._p+2] == "//" then break
+		self._p += 1
 		if c == "\" then
 			anyEscape = true
-			self._p = self._p + 1
+			self._p += 1
 		end if
 	end while
 	result = self.source[startPos : self._p]
-	if anyEscape then result = unescape(result)
-	return result
+	return [result, anyEscape]
 end function
 
+// Get a string literal from the source.  Stop at the delimiter
+// so the caller can see if it is a ":" or "}" or whatever.
+// Automatically unescape the string, and return it.
+Parser._parseString = function
+	strAndEsc = self._getStringAndEsc
+	if strAndEsc[1] then return unescape(strAndEsc[0])
+	return strAndEsc[0]
+end function
 
 // Generating GRFON
 
@@ -282,8 +313,8 @@ _mapToGRFON = function(m, compact, indent, topLevel=false)
 	return join(parts, "")
 end function
 
-_escapeFrom = ["\", """", ":", ";", char(8), char(9), char(10), char(12), char(13)]
-_escapeTo = ["\\", "\""", "\:", "\;", "\b","\t","\n","\f","\r"]
+_escapeFrom = ["\", """", ":", ";", "{", "}", char(8), char(9), char(10), char(12), char(13)]
+_escapeTo = ["\\", "\""", "\:", "\;", "\{", "\}", "\b","\t","\n","\f","\r"]
 _escapeIndexes = _escapeFrom.indexes
 _eol = char(10)
 
@@ -308,29 +339,39 @@ runUnitTests = function
 	
 	assertEqual escape("foo"+char(9)+"bar"), "foo\tbar"
 	assertEqual unescape("foo\tbar"), "foo"+char(9)+"bar"
-	assertEqual escape("http://foo"), "http\:\/\/foo"
+	assertEqual escape("http://foo"), "http://foo"  // NOTE: not escaped!
+	assertEqual escape("foo: //bar"), "foo\: \/\/bar"
 	assertEqual unescape("http\:\/\/foo"), "http://foo"
 	
 	// Note: the order of key/value pairs in a dictionary is undefined.
 	// So, it's a bit hard to unit test, as the order in which they appear
-	// in GRFON isn't defined either.  I've coded an order below which 
-	// currently works, but if these tests ever fail, manual inspection will
-	// be needed to see if they are true failures, or just a new order.
+	// in GRFON isn't defined either.
 	s = toGRFON([1, 2, "foo"], true)
 	assertEqual s, "1; 2; foo";
 	s = toGRFON([1, 2, "foo"])
 	assertEqual escape(s), "1\n2\nfoo"
 	d = {1:"one", 2:"two", "three":"san"}
 	s = toGRFON(d, true)
-	assertEqual s, "1: one; three: san; 2: two"
+	//assertEqual s, "1: one; 2: two; three: san"
+	assertEqual s.indexOf("1: one") != null, true
+	assertEqual s.indexOf("2: two") != null, true
+	assertEqual s.indexOf("three: san") != null, true
+	assertEqual s.split(";").len, 3
 	s = toGRFON(d)
-	assertEqual s, unescape("1: one\nthree: san\n2: two")
+	//assertEqual s, unescape("1: one\n2: two\nthree: san")
+	assertEqual s.indexOf("1: one") != null, true
+	assertEqual s.indexOf("2: two") != null, true
+	assertEqual s.indexOf("three: san") != null, true
+	assertEqual s.split(unescape("\n")).len, 3
 	d = [0, [1], [1,2]]
 	s = toGRFON(d)
 	assertEqual s, unescape("0\n{\n  1\n}\n{\n  1\n  2\n}")
 	d = {"foo":[1, 2, 3], "bar":"baz"}
 	s = toGRFON(d, true)
-	assertEqual s, "bar: baz; foo: {1; 2; 3}"
+	//assertEqual s, "foo: {1; 2; 3}; bar: baz"
+	assertEqual s.indexOf("foo: {1; 2; 3}") != null, true
+	assertEqual s.indexOf("bar: baz") != null, true
+	assertEqual s.split(";").len, 4
 	
 	p = new Parser
 	p.init("   true")
@@ -345,7 +386,8 @@ runUnitTests = function
 	assertEqual parse("1; 2; foo"), [1, 2, "foo"]
 	assertEqual parse("1:one; 2:two"), {1:"one", 2:"two"}
 	assertEqual parse("\tHello, \""Bob\""."), char(9) + "Hello, ""Bob""."
-	
+	assertEqual parse("42.000"), 42
+	assertEqual parse("\42.000"), "42.000"  // <--- how to keep a number as a string!
 	assertEqual parse("foo:{1; 2; 3}; bar:baz"), {"foo":[1, 2, 3], "bar":"baz"}
 	
 	// An empty {} could be interpreted as a list or map, and the choice
@@ -353,12 +395,74 @@ runUnitTests = function
 	assertEqual parse("{}"), {}
 	assertEqual parse("1; 2; {}; 4"), [1, 2, {}, 4]
 	
+	// If a collection has both keyed and unkeyed values, the latter
+	// are returned as a list under "_".
+	d = parse([
+		"	foo: bar",
+		"	42",
+		"	61",
+		"	hike!"])
+	assertEqual d.foo, "bar"
+	assertEqual d["_"], [42, 61, "hike!"]
+	
+	// URLs, more specifically any occurrence of `://`, are parsed
+	// as simple strings even if not backslash-escaped.
+	assertEqual parse("https://miniscript.org"), "https://miniscript.org"
+	assertEqual parse([
+		"{", 
+		"   url: https://miniscript.org",
+		"}"]),
+	  { "url" : "https://miniscript.org" }
+	
+	// Fixed bug with 3 lines of comments throwing Runtime Error
+	assertEqual parse("//" + cr + "foo:42"), {"foo": 42}
+	assertEqual parse("//" + cr + "//" + cr + "foo:42"), {"foo": 42}
+	assertEqual parse("//" + cr + "//" + cr + "//" + cr + "foo:42"), {"foo": 42}
+	
+	// Fixing bug with two line breaks after a comment making the "{" character a part of the key
+	assertEqual parse("//" + cr + cr + "{foo:42}"), {"foo": 42}
+	
+	// Check a malformed GRFON input, where a key:value pair is missing
+	// the value.
+	d = parse([
+	    "foo: bar",
+		 "baz: {",
+		 "	this is the bug: //right here",
+		 "}",
+		 "bamf: 42"])
+	assertEqual d.foo, "bar"
+	assertEqual d.bamf, 42
+	assertEqual d.baz["this is the bug"], null
+	
+	// toGRFON() should escape { and } inside strings
+	s = toGRFON("a {b} c")
+	assertEqual s, "a \{b\} c"
+	assertEqual parse(s), "a {b} c"
+
+	// Multiple newline-separated unkeyed sub-collections should return a list,
+	// not merge the first sub-collection's keys into the parent.
+	d = parse([
+		"systems: {",
+		"  {",
+		"    name: Reactor",
+		"    maxPower: 8",
+		"  }",
+		"  {",
+		"    name: Doors",
+		"    maxPower: 1",
+		"  }",
+		"}"])
+	assertEqual d.systems isa list, true
+	assertEqual d.systems.len, 2
+	assertEqual d.systems[0].name, "Reactor"
+	assertEqual d.systems[1].name, "Doors"
+
 	if errorCount == 0 then
 		print "All tests passed.  Fus Ro Dah!"
 	else
 		print errorCount + " error" + "s" * (errorCount!=1) + " found."
 	end if
-	
+		
 end function
 
 if locals == globals then runUnitTests

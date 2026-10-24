@@ -4,19 +4,51 @@
 // code: assert conditions that you think should always be true, or otherwise
 // check your assumptions and report when they fail.
 
+if intrinsics.hasIndex("Display") and intrinsics.hasIndex("displayMode") then
+	_prevMode = 0
+	errDisplay = null
+	
+	// prepareErrDisplay is used internally to prepare the default error display.
+	// You probably won't ever need to call this.
+	prepareErrDisplay = function
+		outer._prevMode = display(0).mode
+		display(0).mode = displayMode.text
+		outer._prevDisp = display(0)
+		outer.errDisplay = new TextDisplay
+		errDisplay.backColor = "#00000088"
+		errDisplay.color = color.red
+		errDisplay.clear
+		errDisplay.install 0
+	end function
+	
+	// clear: clears (just) the error display.
+	clear = function
+		if errDisplay == null then prepareErrDisplay
+		_prevDisp.install 0
+		display(0).mode = _prevMode
+		outer.errDisplay = null
+	end function
+else
+	errDisplay = {}
+	errDisplay.print = @print
+	clear = null
+end if
 
 // abort: print a stack trace (optionally, after an error message),
 // then exit the program.
 abort = function(errMsg)
+	if errDisplay == null then prepareErrDisplay
 	if errMsg == null then errMsg = "qa.abort has been called."
-	print errMsg
-	print "Call stack:"
+	errDisplay.print errMsg
+	errDisplay.print "Call stack:"
 	i = 0
 	for line in stackTrace
 		if line.indexOf("qa.ms") != null then continue
-		print "  " + i + ". " + line
+		errDisplay.print "  " + i + ". " + line
 		i = i + 1
 	end for
+	errDisplay.print "(To clear this display, enter: qa.clear)"
+	if not globals.hasIndex("qa") then globals.qa = outer
 	exit
 end function
 
@@ -32,14 +64,45 @@ end function
 // assertEqual: abort if the first two parameters are not equal.
 // Additional descriptive note is optional.
 assertEqual = function(actual, expected, note)
-	if actual == expected then return
+	if @actual == @expected then return
 	msg = "Assert failed"
 	if note != null then msg = msg + " (" + note + ")"
-	msg = msg + ": expected `" + expected + "`, but got `" + actual + "`"
+	msg = msg + ": expected `" + @expected + "`, but got `" + @actual + "`"
 	abort msg
 end function
 
-namedMaps = { number:"number", string:"string", list:"list", map:"map" }
+// deprecated: don't use the namedMaps map directly.  Instead, just use the
+//	typeOf function below, which is both more reliable and more efficient.
+//	If you're on Mini Micro, also see the global `mapName` function added
+//	in /sys/lib/startup.ms.
+namedMaps = function
+	result = {}
+	for i in _namedMapNames.indexes
+		result[_namedMapMaps[i]] = _namedMapNames[i]
+	end for
+	return result
+end function
+
+_namedMapMaps = []
+_namedMapNames = []
+addNamedMap = function(name, map=null)
+	if map == null and intrinsics.hasIndex(name) then map = intrinsics[name]
+	if map == null then return
+	idx = _namedMapNames.indexOf(name)
+	if idx == null then
+		_namedMapNames.push name
+		_namedMapMaps.push map
+	else
+		_namedMapMaps[idx] = map
+	end if
+end function
+
+for cls in ("number string list map " +
+  "FileHandle Image Sound Sprite Bounds " +
+  "Display TextDisplay SpriteDisplay TileDisplay PixelDisplay SolidColorDisplay").split
+	addNamedMap cls
+end for
+
 
 typeOf = function(value)
 	if @value isa funcRef then return "funcRef"
@@ -50,7 +113,10 @@ typeOf = function(value)
 	if value isa map then
 		mapType = value
 		if value.hasIndex("__isa") then mapType = value.__isa
-		if namedMaps.hasIndex(mapType) then return namedMaps[mapType]
+		for i in _namedMapMaps.indexes
+			if refEquals(_namedMapMaps[i], mapType) then return _namedMapNames[i]
+		end for
+		if mapType.hasIndex("_name") then return mapType._name
 		return "map"
 	end if
 	return "unknown"
@@ -59,11 +125,11 @@ end function
 // assertType: abort if the first parameter is not of the specified type.
 // Additional descriptive note is optional.
 assertType = function(value, type, note)
-	if value isa type then return
+	if @value isa type then return
 	msg = "Assert failed"
 	if note != null then msg = msg + " (" + note + ")"
 	msg = msg + ": expected type " + namedMaps[type] + 
-	  ", but got a " + typeOf(value) + " (" + value + ")"
+	  ", but got a " + typeOf(@value) + " (" + @value + ")"
 	abort msg
 end function
 
@@ -87,8 +153,10 @@ runUnitTests = function
 	assertEqual typeOf("abc"), "string"
 	assertEqual typeOf([1,2,3]), "list"
 	assertEqual typeOf(@rnd), "funcRef"
-	//assertEqual typeOf(new Sprite), "Sprite"
-	//assertEqual typeOf(gfx), "PixelDisplay"
+	if intrinsics.hasIndex("Sprite") then
+		assertEqual typeOf(new Sprite), "Sprite"
+		assertEqual typeOf(gfx), "PixelDisplay"
+	end if
 	
 	if errorCount == 0 then
 		print "All tests passed.  Quality code!"

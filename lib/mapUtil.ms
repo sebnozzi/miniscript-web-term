@@ -7,11 +7,27 @@
 map.get = function(key, defaultValue=null)
 	m = self
 	while m
-		if m.hasIndex(key) then return m[key]
+		if m.hasIndex(@key) then return m[@key]
 		if not m.hasIndex("__isa") then break
 		m = m.__isa
 	end while
-	return defaultValue
+	return @defaultValue
+end function
+
+// hasOrInherits: like hasIndex, but this one also returns true
+// for keys that are not defined directly on this map, but somewhere
+// up the superclass chain.
+//
+// When m.hasOrInherits(k) is false, map.get(k, default) returns
+// the default value.
+map.hasOrInherits = function(index)
+	m = self
+	while m
+		if m.hasIndex(@index) then return true
+		if not m.hasIndex("__isa") then break
+		m = m.__isa
+	end while
+	return false
 end function
 
 // hasValue: return true if this map contains the given value as
@@ -20,13 +36,13 @@ end function
 // does not walk the inheritance chain (just like .hasIndex), but
 // if you pass `true` as the second parameter, then it does.
 map.hasValue = function(v, includeInherited=false)
-	if self.indexOf(v) != null then return true
+	if self.indexOf(@v) != null then return true
 	if includeInherited then
 		m = self
 		while m
 			if not m.hasIndex("__isa") then break
 			m = m.__isa
-			if m.indexOf(v) != null then return true
+			if m.indexOf(@v) != null then return true
 		end while
 	end if
 	return false
@@ -45,7 +61,7 @@ end function
 map.inverse = function
 	result = {}
 	for kv in self
-		result[kv.value] = kv.key
+		result[@kv.value] = @kv.key
 	end for
 	return result
 end function
@@ -54,7 +70,7 @@ end function
 // does not return true.
 map.filterIndexes = function(func)
 	for k in self.indexes
-		if not func(k) then self.remove k
+		if not func(@k) then self.remove @k
 	end for
 end function
 
@@ -62,7 +78,7 @@ end function
 // function, applied to the value, does not return true.
 map.filterValues = function(func)
 	for k in self.indexes
-		if not func(self[k]) then self.remove k
+		if not func(self[@k]) then self.remove @k
 	end for
 end function
 
@@ -70,7 +86,7 @@ end function
 // in place.
 map.applyToValues = function(func)
 	for kv in self
-		self[kv.key] = func(kv.value)
+		self[@kv.key] = func(@kv.value)
 	end for
 end function
 
@@ -89,9 +105,9 @@ end function
 // applied to locals (or globals), enabling you to swap the values
 // of two variables.
 map.swap = function(key1, key2)
-	temp = self[key1]
-	self[key1] = self[key2]
-	self[key2] = temp
+	temp = @self[@key1]
+	self[key1] = @self[@key2]
+	self[key2] = @temp
 end function
 
 // mapUtils.fromTo: generate a map from one sequence (list or string)
@@ -103,7 +119,7 @@ fromTo = function(fromSeq, toSeq)
 	end if
 	result = {}
 	for i in fromSeq.indexes
-		result[fromSeq[i]] = toSeq[i]
+		result[@fromSeq[i]] = @toSeq[i]
 	end for
 	return result
 end function
@@ -119,12 +135,15 @@ runUnitTests = function
 		end if
 	end function
 
-	d = {"one":"ichi", "two":"ni", "three":"san", "four":"shi", "five":"go"}
+	d = {"one":"ichi", "two":"ni", "three":"san", "four":"shi", "five":"go", @print: "six"}
 
 	testing = "get"
 	assertEqual d.get("one", 1), "ichi"
 	assertEqual d.get("ten", 10), 10
 	assertEqual d.get("twenty"), null
+	assertEqual d.get(@print), "six"
+	
+	d.remove @print
 	
 	testing = "hasValue"
 	assertEqual d.hasValue("ni"), true

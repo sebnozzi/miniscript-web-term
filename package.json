@@ -1,8 +1,11 @@
 {
   "name": "miniscript-web-term",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A web-based MiniScript terminal runner",
-  "author": "Sebastian Nozzi",
+  "author": "Joe Strout",
+  "contributors": [
+    "Sebastian Nozzi"
+  ],
   "license": "MIT",
   "keywords": [
     "miniscript",
@@ -18,7 +21,9 @@
     "index.html"
   ],
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/miniscript-web-term.js",
+    "build": "npm run build-wasm && npm run build-js",
+    "build-js": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/miniscript-web-term.js",
+    "build-wasm": "wasm/build.sh",
     "build-watch": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/miniscript-web-term.js --watch"
   },
   "devDependencies": {
@@ -30,7 +35,6 @@
   },
   "dependencies": {
     "@xterm/xterm": "^5.4.0-beta.1",
-    "miniscript-ts": "^0.1.9",
     "xterm-readline": "^1.1.1"
   }
 }
